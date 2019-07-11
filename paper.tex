@@ -44,7 +44,7 @@ Due to complex algorithms, autonomous driving and facial recognition are feasibl
 Furthermore, the use of ML in industry is often unavoidable since the competition in such areas is rapidly evolving.
 
 Deep neural networks (NN) are popular machine learning models which are able to learn complex patterns by means of training examples.
-In combination which huge data sets, they achieve superior results in various fields such as image recognition~\cite{efficient_net,multigrain} and natural language processing~\cite{nlp1,nlp2}.
+In combination which huge data sets, they achieve superior results in various fields such as image recognition~\cite{efficient_net,krizhevsky2012imagenet} and natural language processing~\cite{nlp1,nlp2}.
 However, although deep NNs are state-of-the-art in many fields of machine learning, they lack in the estimation of uncertainty~\cite{Gal2015Bayesian,Kendall2017Uncertainy}.
 They usually make overconfident predictions in situations that they were never trained on.
 In practice, this can lead to a lot of problems since uncertainty estimation is an important part of machine learning, and in particular autonomous learning~\cite{gal2017deep}.
@@ -510,7 +510,7 @@ In order to update the parameters $\theta$, we define the sets
     \mathcal{S} &= \mathcal{S}_{\mathrm{L}} \cup \mathcal{S}_{\mathrm{P}},
 \end{align}
 where $\mathcal{S}$ contains all factors from likelihood and prior that are defined in Eq.~\ref{eq:posterior_full}.
-Subsequently, we iterate over all distributions in $\mathcal{S}$ and minimize the KL-divergence given by
+Subsequently, we iterate over distributions in $\mathcal{S}$ and minimize the KL-divergence
 \begin{align}
     \theta^* = \underset{\theta}{\mathrm{argmin}}\  \mathrm{KL}\left(Z^{-1}f\cdot q_\theta(\boldsymbol{\omega})\right \| q_\theta(\boldsymbol{\omega})),
 \end{align}

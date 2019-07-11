@@ -4,10 +4,16 @@
 \usepackage{amsmath, amsfonts}
 \usepackage{cite, url}
 \usepackage{blindtext, todonotes}
+\usepackage{appendix}
 
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{tabularx}
+
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
 
 
 \urldef{\mail}\path|dhuseljic@uni-kassel.de|
@@ -16,17 +22,20 @@
 \title{Inference in Bayesian Neural Networks}
 
 \begin{document}
-
-
 \author{Denis Huseljic} 
 \institute{Intelligent Embedded Systems, University of Kassel, Germany\\ \mail}
 
 \maketitle
 \begin{abstract}
-\blindtext
+Even though deep neural networks are superior in several fields of machine learning, they are not able to learn from small data sets, and do not provide reliable uncertainty estimates.
+In contrast, Bayesian neural networks follow a Bayesian approach and aim at overcoming these issues by placing prior probability distributions over their weights.
+As a result, they are able to capture uncertainty in the parameters which enables the detection of out-of-data samples and the training on small data sets with a reduced risk of overfitting. However, the inference/training procedure in such models is often a challenging problem.
+In this work, we give an overview on several important inference techniques that are used in literature.
+Additionally, we discuss the advantages and disadvantages of each method and make a comparison amongst them.
+Furthermore, implementations for the introduced methods are provided.
 \end{abstract}
 
-% \keywords{Bayesian Neural Networks \and Deep Learning \and Bayesian Inference \and Uncertainty Estimation \and Big Data  }
+\keywords{bayesian neural networks \and deep learning \and bayesian inference \and uncertainty estimation \and big data  }
 
 \section{Introduction}
 Due to the improvement in computational performance and the collection of huge amounts of data over the last decade, machine learning (ML) is an important topic in today's society.
@@ -38,24 +47,22 @@ Deep neural networks (NN) are popular machine learning models which are able to 
 In combination which huge data sets, they achieve superior results in various fields such as image recognition~\cite{efficient_net,multigrain} and natural language processing~\cite{nlp1,nlp2}.
 However, although deep NNs are state-of-the-art in many fields of machine learning, they lack in the estimation of uncertainty~\cite{Gal2015Bayesian,Kendall2017Uncertainy}.
 They usually make overconfident predictions in situations that they were never trained on.
-In practice, this can lead to a lot of problems since uncertainty estimation is an important part of machine learning, and in particular autonomous learning~\cite{Gal2016Active}.
+In practice, this can lead to a lot of problems since uncertainty estimation is an important part of machine learning, and in particular autonomous learning~\cite{gal2017deep}.
 For example, a self driving car should know what it does not know during deployment in practice.
 That is, if an image of a sensor is full of noise due to reflections on surfaces in the real world, the deep learning model should return some type of uncertainty which forces the driver to take action~\cite{car_accident}.
 
-In contrast, the Bayesian approach to neural networks~\cite{mackay1992practical,Neal:1995:BLN:922680} and in general Bayesian models offer more detailed information.
+In contrast, the Bayesian approach to neural networks~\cite{mackay1992practical,Neal:1995:BLN:922680} and in general Bayesian models offer well defined uncertainty estimates.
 In contrast to typical NNs, they incorporate prior knowledge and introduce distributions over they parameters.
-As a consequence, they are able to capture uncertainty on instances they were never trained one.
-Furthermore, they are also capable to learn from small data sets without the risk of over-fitting.
+As a consequence, they are able to capture uncertainty on instances they were never trained one~\cite{Kendall2017Uncertainy}.
+Furthermore, they are also capable to learn from small data sets without the risk of over-fitting~\cite{Gal2015Bayesian}.
 
-\todo{Contribution neu, Was ist neu, forschun zusammenfassen}
 The main contribution of this work is as follows:
 \begin{itemize}
-    \item We explain the foundations of neural networks and Bayesian inference.
-    Subsequently, we make connections to Bayesian neural networks and discuss their advantages.
-    \item We summarize important inference techniques that are used to train such networks. 
-    Therefore, we analyze variational inference, expectation propagation and Markov Chain Monte-Carlo methods from the perspective of Bayesian neural networks.
+\item We explain different inference techniques for Bayesian neural networks and discuss their advantages and disadvantages. 
+Furthermore, we provide a detailed comparison of the techniques among each other.
+\item We provide open source implementations for the techniques that are introduced below.
 \end{itemize}
-Since they offer improved uncertainty estimates, Bayesian neural networks can be used to provide improvement in active learning~\cite{Gal2016Active,hernandez2015probabilistic}, reinforcement learning~\cite{BlundellBBB,Gal2016Dropout}, and various other fields of machine learning.
+Due to the well defined uncertainty estimates, Bayesian neural networks can be used to provide improvement in active learning~\cite{gal2017deep,hernandez2015probabilistic}, reinforcement learning~\cite{BlundellBBB,Gal2016Dropout}, and various other fields of machine learning.
 
 The rest of this literature review is structured as follows: 
 In Section~\ref{sec:foundation}, we introduce foundations that are essential for understanding Bayesian neural networks and their training procedures.
@@ -65,7 +72,7 @@ Finally in Section~\ref{sec:conclusion_outlook}, we summarize the presented appr
 \section{Foundations}
 \label{sec:foundation}
 In the following section, we will provide the necessary introduction to neural networks, Bayesian inference and Bayesian neural networks.
-The understanding of these concepts is essential for upcoming methods such as variational inference (Sec.~\ref{sec:variational_inference}), expectation propagation (Sec.~\ref{sec:expectation_propagation}) and Markov chain Monte-Carlo~(Sec.~\ref{sec:mcmc}).
+The understanding of these concepts is essential for upcoming methods such as variational inference (Sec.~\ref{sec:variational_inference}) and expectation propagation (Sec.~\ref{sec:expectation_propagation}). % and Markov chain Monte-Carlo~(Sec.~\ref{sec:mcmc}).
 
 \subsection{Neural Networks}
 \label{sec:neural_networks}
@@ -113,42 +120,42 @@ They are based on the concept of the visual cortex and are even able to outperfo
 
 \subsection{Bayesian Inference}
 \label{sec:bayesian_inference}
-Now we investigate the problem to determine model parameters in a Bayesian way which differs from the usual frequentist perspective.
+Now we investigate the problem to determine model parameters in a Bayesian way which differs from the usual frequentist perspective~\cite{bishop:2006:PRML}.
 In a general machine learning setting, we have training samples $\mathbf{X} = \{\mathbf{x}_1, \dots,  \mathbf{x}_N\}$ with their corresponding targets $\mathbf{Y} = \{\mathbf{y}_1, \dots  \mathbf{y}_N\}$. 
 Our goal is to determine the parameters $\boldsymbol{\omega}$ of a function such that it captures patterns provided by the data.
-In a Bayesian approach, we introduce a prior probability distribution $p(\boldsymbol{\omega})$ which captures our prior belief in the parameters.
-For example, we consider a coin flip where we have the parameter set $\boldsymbol{\omega} = \{\mu\}$ and $\mu$ represents the parameter of a Bernoulli distribution (the probability of landing heads).
+In a Bayesian approach, we introduce a \textit{prior probability distribution} $p(\boldsymbol{\omega})$ which captures our prior belief in the parameters.
+For example, we consider a coin flip where we have the parameter set $\boldsymbol{\omega} = \{\mu\}$ and $\mu$ represents the parameter of a Bernoulli distribution (the probability of heads).
 We do not know the real value of that parameter and in this particular problem, our prior belief might be that we have a fair coin. 
 Thus, we introduce a prior $p(\boldsymbol{\omega})$ which takes the form of a $\mathrm{Beta}$ distribution and has its mode at $0.5$.
-By observing data, we update that belief by using a likelihood distribution $p\left(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega} \right)$ which depends on the training data $\left(\mathbf{X}, \mathbf{Y}\right)$. 
-If we have a large data set, the likelihood has a big impact on the resulting update and vice versa.
-It describes the probability of observing the labels $\mathbf{Y}$ for the given samples $\mathbf{X}$ and some weight $\boldsymbol{\omega}$. 
+By observing data, we update that belief by using a \textit{likelihood distribution} $p\left(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega} \right)$ which depends on the training data $\left(\mathbf{X}, \mathbf{Y}\right)$. 
+If we have a large data set, the likelihood has a big impact on the resulting update.
+It describes the probability of observing the labels $\mathbf{Y}$ for the given samples $\mathbf{X}$ and some weight realization $\boldsymbol{\omega}$. 
 The corresponding functional form of our likelihood is typically a factorized Gaussian distribution for regression or a factorized Multinoulli distributions for classification.
 
-By combining the likelihood and prior distribution, we obtain the posterior distribution over the parameters given the data according to 
+By combining the likelihood and prior distribution, we obtain the \textit{posterior distribution} over the parameters given the data according to 
 \begin{align}
     p\left(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y} \right) = \frac{p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})p\left(\boldsymbol{\omega}\right)}{p\left(\mathbf{Y} | \mathbf{X}\right)}.\label{eq:posterior}
 \end{align}
 The posterior distribution over $\boldsymbol{\omega}$ depicts the most probable parameters given our data.
 
 
-The denominator $p\left(\mathbf{Y}|\mathbf{X}\right)$ is known as the model evidence or marginal likelihood and is obtained by marginalizing the likelihood and prior with respect to the model parameters $\boldsymbol{\omega}$:
+The denominator $p\left(\mathbf{Y}|\mathbf{X}\right)$ is known as the \textit{model evidence} or marginal likelihood and is obtained by marginalizing the likelihood and prior with respect to the model parameters $\boldsymbol{\omega}$:
 \begin{align}
     p(\mathbf{Y} | \mathbf{X}) = \int p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})p\left(\boldsymbol{\omega}\right) \text{d}\boldsymbol{\omega}\label{eq:model_evidence}.
 \end{align}
-It ensures that the posterior in Eq.~\ref{eq:posterior} is a valid probability and its sum is equal to one.
+It ensures that the posterior in Eq.~\ref{eq:posterior} is a valid probability and its sum/integral is equal to one.
 
 In order to make predictions for a new sample $\mathbf{x}^*$ we compute
 \begin{align}
     p(\mathbf{y}^*|\mathbf{x}^*, \mathbf{X}, \mathbf{Y}) = \int p\left(\mathbf{y}^* | \mathbf{x}^*, \boldsymbol{\omega} \right) p\left(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y} \right) \text{d}\boldsymbol{\omega}\label{eq:predictive_distribution}
 \end{align}
-which is called predictive distribution and yields a distribution over the output $\mathbf{y}^*$.
-Note that the first term in Eq.~\ref{eq:predictive_distribution} is not equal to the likelihood we use in the posterior in Eq.~\ref{eq:posterior}.
+which is called \textit{predictive distribution} and yields a distribution over the output $\mathbf{y}^*$.
+Note that the first term in Eq.~\ref{eq:predictive_distribution} is not equal to the likelihood we use in the posterior (Eq.~\ref{eq:posterior}).
 It depicts the probability distribution of the label $\mathbf{y}^*$ given its new input and some parameters $\boldsymbol{\omega}$, whereas the likelihood considers the whole data set.
 Intuitively, we weight predictions higher where the model parameters have a high posterior probability.
 
 Evaluating Eq.~\ref{eq:predictive_distribution} is called \textit{inference} and is the main goal in a Bayesian approach. 
-In the coin flip example above, we purposely picked the $\mathrm{Beta}$ distribution for the prior because it is the conjugate of the Bernoulli distribution.
+In the coin flip example above, we purposely picked the $\mathrm{Beta}$ distribution for the prior because it is conjugate to the Bernoulli distribution.
 This means that the resulting posterior will also be a $\mathrm{Beta}$ distribution and can be computed analytically.
 In contrast, more complex models such as Bayesian neural networks have the problem that the integrals in Eq.~\ref{eq:model_evidence} and Eq.~\ref{eq:predictive_distribution} are intractable.
 Thus, we need approximations for the posterior distribution and the predictive distribution.
@@ -165,14 +172,15 @@ In particular, we have a set of weights\footnote{Note: We use another the notati
 For simplicity, we assume point estimates for the bias terms $\mathbf{b}_l$. 
 \begin{figure}
     \centering
-    \includegraphics[width=.55\textwidth]{images/BayesianNeuralNetwork.pdf}
+    \includegraphics[width=.5\textwidth]{images/BayesianNeuralNetwork.pdf}
     \caption{Illustration of a deterministic neural network (left) and Bayesian neural network (right). The weights of the ordinary NN are defined by point estimates which as well results in a point estimate for the prediction $y$. In contrast, the Bayesian NN defines a distribution over its weights and thus we obtain a distribution $p(y)$ for the output.}
     \label{fig:bayesian_neural_network}
 \end{figure}
 
-The main goal in such a settings is to compute the posterior distribution $p\left(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y} \right)$ which is defined by Eq.~\ref{eq:posterior}.
+Theoretically, the main goal in such a settings is to compute the posterior distribution $p\left(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y} \right)$ which is defined by Eq.~\ref{eq:posterior}.
 Furthermore by using Eq.~\ref{eq:predictive_distribution}, we would obtain a predictive distribution for new inputs $\mathbf{x}^*$.
 This is illustrated in Fig.~\ref{fig:bayesian_neural_network}.
+Note however, it is not possible to compute these distributions analytically and we need to rely on approximations.
 
 In practice, we obtain the predictive distribution~\ref{eq:predictive_distribution} by Monte-Carlo integration.
 That is, we make multiple forward propagations with weights that are sampled independently from the posterior (its current approximation) which leads to a output distribution. An example for this is shown in Fig.~\ref{fig:uncertainty_example}.
@@ -182,7 +190,7 @@ The term \textit{epistemic uncertainty} (knowledge uncertainty) depicts the unce
 The counterpart \textit{aleatoric uncertainty} (dice players uncertainty) characterizes the uncertainty that can not be reduced (e.\,g., sensor noise). 
 \begin{figure}
     \centering
-    \includegraphics[width=.7\textwidth]{images/uncertainty_example.pdf}
+    \includegraphics[width=.6\textwidth]{images/uncertainty_example.pdf}
     \caption{The predictive distribution inferred by a Bayesian Neural Network for a simple regression task. As a result, we see increasing uncertainty in areas where no data was observed (epistemic) as well as uncertainty that is due to noisy measurements (aleatoric). The BNN was trained on a toy data set with Bayes-by-Backprop, a method that we explain in Sec.~\ref{sec:bayes_by_backprop}.
     In order to make these predictions, we made $100$ forward propagations, each yielding a different result, and computed their mean and standard deviation. Therefore, we had to sample $100$ weights from the approximation of the posterior distribution $p(\boldsymbol{\omega}| \mathbf{X}, \mathbf{Y})$.}
     \label{fig:uncertainty_example}
@@ -202,7 +210,7 @@ In order to train a Bayesian neural network, the main goal is to determine the p
 where the model evidence $p(\mathbf{Y}|\mathbf{X})$ from  Eq.~\ref{eq:model_evidence} is intractable due to the integral with respect to the parameters $\boldsymbol{\omega} = \{\mathbf{W}_1, \ldots,\mathbf{W}_L\}$.
 Therefore, we make use of approximate inference techniques~\cite{Gal2016Uncertainty} which are typically employed when working with intractable distributions. 
 
-The functional form of the likelihood $p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})$ and prior $p\left(\boldsymbol{\omega}\right)$ has to be chosen by the user.
+The specific form of the likelihood $p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})$ and prior $p\left(\boldsymbol{\omega}\right)$ has to be chosen by the user.
 For example, the likelihood can be given as
 \begin{align}
     p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega}) = \prod_{i=1}^N p\left(\mathbf{y}_i | f^{\boldsymbol{\omega}}(\mathbf{x}_i) \right),
@@ -239,7 +247,7 @@ Subsequently, we transform our inference problem into an optimization problem by
 \end{align}
 Intuitively, it can be seen as a dissimilarity measure between two distributions and is a non-negative quantity. Thus, minimizing the KL-divergence w.r.t $\theta$ induces similarity between the variational distribution $q_\theta(\boldsymbol{\omega})$ and the posterior distribution $p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})$.
 
-By reformulating Eq.~\ref{eq:kl_divergence} (see Appendix), we are able to obtain an equivalent optimization problem where we have to minimize the negative evidence lower bound (ELBO) given by
+By reformulating Eq.~\ref{eq:kl_divergence} (Appendix~\ref{app:elbo_deriv}), we are able to obtain an equivalent optimization problem where we have to minimize the negative evidence lower bound (ELBO) given by
 \begin{align}
     \mathcal{F}(\theta) &= - \int q_\theta(\boldsymbol{\omega}) \ln p \left(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega}\right) \text{d}\boldsymbol{\omega} +
     \text{KL}\left(q_\theta(\boldsymbol{\omega}) || p(\boldsymbol{\omega}) \right). \label{eq:elbo} 
@@ -253,17 +261,17 @@ That is, the KL-divergence can be understood as a regularization term which pena
 For example, if the prior distribution given by Eq.~\ref{eq:prior_factorized} uses a small variance, than the KL-divergence has a large contribution to the overall error in Eq.~\ref{eq:elbo_loss_expectation} which leads to a strong regularization. 
 Thus, the variance in the prior can be seen as a hyperparameter for regularization.
 
-The specific functional form of the variational distribution $q_\theta$ is an important user specific choice.
-It has to be a simple distribution such that we can efficiently sample from it.
+The specific functional form of the variational distribution $q_\theta(\boldsymbol{\omega})$ is an important user specific choice.
+It has to be a simple distribution so that we can efficiently sample from it.
 Additionally, it needs to be expressive in the sense that it is able to provide a good approximation to the true posterior.
 One popular approach is to use a factorized distribution~\cite{BlundellBBB,Graves2011Practical,hernandez2015probabilistic} which is obtained by introducing a simple distribution (i.\,e., Gaussian) for every weight and taking their product.
-Similarly to the likelihood, it uses an independence assumption between the weights which is often called mean field assumption~\cite{blei2017variational}.
 Thus, a BNN might take a variational distribution as 
 \begin{align}
     q_\theta\left(\boldsymbol{\omega}\right) = \prod_{l=1}^{L}\prod_{i=1}^{K_l}\prod_{j=1}^{K_{l-1}} \mathcal{N}\left( w_{ij,l} \mid \theta^\mathrm{mean}_{ij,l}, \theta^\mathrm{var}_{ij,l}\right)\label{eq:variational_factorized}
 \end{align}
 where $\theta^\mathrm{mean}_{ij,l}$ and $\theta^\mathrm{var}_{ij,l}$ are elements of the variational parameters $\theta$ for the mean and variance of a connection in the NN. 
-We can sample from that distribution in an easy way~\cite{bishop:2006:PRML} with the drawback that we loose weight correlations which is due to the independence assumption. This is illustrated in Figure~\ref{fig:correlation_loss}.
+Similarly to the likelihood, it uses an independence assumption between the weights which is often called mean field assumption~\cite{blei2017variational}.
+We can sample from that distribution in an easy way~\cite{bishop:2006:PRML} with the drawback that we loose weight correlations which is due that assumption. An illustration is given in Fig.~\ref{fig:correlation_loss}.
 \begin{figure}
     \centering
     \includegraphics[width=.6\textwidth]{images/loosing_correlations.pdf}
@@ -271,10 +279,10 @@ We can sample from that distribution in an easy way~\cite{bishop:2006:PRML} with
     \label{fig:correlation_loss}
 \end{figure}
 
-In this way, we obtain a loss function for our neural network which we need to optimize with respect to the variational parameters $\theta$ (i.\,e. every $\theta^\mathrm{mean}_{ij,l}$ and $\theta^\mathrm{var}_{ij,l}$). 
+By using Eq.~\ref{eq:elbo_loss_expectation} and the factorized distributions for prior and variational, we obtain a loss function for our neural network which we need to optimize with respect to the variational parameters $\theta$ (i.\,e. every $\theta^\mathrm{mean}_{ij,l}$ and $\theta^\mathrm{var}_{ij,l}$). 
 Therefore, we only compute derivatives instead of the integral in the model evidence (Eq.~\ref{eq:model_evidence}) which is usually easier due to existing algorithms like backpropagation. 
 However, ordinary VI does not scale to large data sets and yields problems when dealing with high model complexity~\cite{Gal2016Uncertainty}.
-In particular, the expected log likelihood term in Eq.~\ref{eq:elbo_loss_expectation} still needs an integration over all model parameters, we need to compute this expectation for each entry $(\mathbf{x}_i, \mathbf{y}_i)$ in our training data and we have to derive its gradient.
+In particular, the expected log likelihood term in Eq.~\ref{eq:elbo_loss_expectation} still needs an integration over all model parameters, we need to compute this expectation for each entry $(\mathbf{x}, \mathbf{y}) \in \mathbf{X} \times \mathbf{Y}$ in our training data and we have to derive its gradient.
 In order to tackle these problems, we will introduce several approximation schemes in the following sections.
 
 \subsubsection{Practical Variational Inference}
@@ -306,7 +314,8 @@ However, by adding indices one could use different prior distributions in differ
 
 Graves introduced the first approach that works well with complex models and large data sets.
 However, in practical application his VI approach does not perform well due to noisy gradient estimations and missing weight correlations.
-The former is due to taking the derivative of the Monte-Carlo integration in Eq.~\ref{eq:montecarlo_expectation} and the latter is due to the factorized assumption for the variational distribution (see Fig.~\ref{fig:correlation_loss}).
+The former is due to taking the derivative of the Monte-Carlo integration in Eq.~\ref{eq:montecarlo_expectation} which leads to the necessity of large numbers of training iterations (even for simple regression problems). The latter is due to the factorized assumption for the variational distribution (see Fig.~\ref{fig:correlation_loss}).
+
 
 \subsubsection{Bayes-by-Backprop}
 \label{sec:bayes_by_backprop}
@@ -330,7 +339,7 @@ Proof. See \cite{BlundellBBB}.
 Using Theorem~\ref{the:reparam_trick}, we transform the derivative of our objective function from Eq.~\ref{eq:elbo_loss_expectation}, to
 \begin{align}
     \frac{\partial}{\partial\theta}\mathcal{F}(\theta) &= \frac{\partial}{\partial\theta}\int q_\theta(\boldsymbol{\omega}) \ln \frac{q_\theta(\boldsymbol{\omega})}{p(\boldsymbol{\omega})p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})}\mathrm{d}\boldsymbol{\omega} \\
-    &= \frac{\partial}{\partial\theta}\mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln \frac{q_\theta(\boldsymbol{\omega})}{p(\boldsymbol{\omega})p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})} \right]\label{eq:applied_reparam} \\
+    &= \frac{\partial}{\partial\theta}\mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln \frac{q_\theta(\boldsymbol{\omega})}{p(\boldsymbol{\omega})p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})} \right]\\
     &\overset{\eqref{eq:reparam_trick}}{=}
     \mathbb{E}_{q(\epsilon)}\left[ \frac{\partial f(\boldsymbol{\omega}, \theta)}{\partial\boldsymbol{\omega}}\frac{\partial\boldsymbol{\omega}}{\partial\theta} + \frac{\partial f(\boldsymbol{\omega}, \theta)}{\partial \theta} \right]
     \label{eq:elbo_bayes_by_backprop}
@@ -364,21 +373,21 @@ They also achieved similar results as deterministic dropout CNN architectures on
 
 \subsubsection{Dropout Variational Inference}
 \label{sec:dropout_inference}
-The approaches above are usable with complex models due to factorized distributions for prior/posterior and are also able to process large data sets due to sub-sampling approaches.
+The approaches above are usable with complex models due to factorized distributions for prior/variational and are also able to process large data sets due to sub-sampling approaches.
 Furthermore, even though they do not achieve better results than deterministic models, they obtain similar ones with the extension of uncertainty estimates.
 
 However, the complexity of modern deep learning models are often as big as the memory of a GPU allows.
 By considering the methods above, we already double that complexity.
 For example, if we assume simple Gaussian distributions for both prior and variational, we obtain mean and variance parameters for each connection.
 That is a problem when applying Bayesian NNs to state-of-the-art architectures.
-Furthermore, until now we were not able to design correlations between weights which generally leads to superior predictive performance~\cite{krizhevsky2012imagenet}.
+Furthermore, until now we were not able to design correlations between weights which generally lead to the usual superior predictive performance~\cite{krizhevsky2012imagenet}.
 
-\todo{Wohin? Ggf. von oben den text mit runter kopieren}Gal et al.~\cite{Gal2016Uncertainty} noticed these problems that occur when using Bayesian models in practice. 
-Furthermore, he discovered practical methods in Bayesian neural networks~\cite{Gal2016Dropout} with the help of existing techniques such as dropout~\cite{Srivastava:2014:DSW:2627435.2670313}.
-With the help stochastic regularization techniques (SRT), one is able to estimate uncertainty in a NN.
-Therefore, we will first introduce dropout which is a commonly used SRT in most deep learning models.
+% \todo{Wohin? Ggf. von oben den text mit runter kopieren}Gal et al.~\cite{Gal2016Uncertainty} noticed these problems that occur when using Bayesian models in practice. 
+% Furthermore, he discovered practical methods in Bayesian neural networks~\cite{Gal2016Dropout} with the help of existing techniques such as dropout~\cite{Srivastava:2014:DSW:2627435.2670313}.
+% With the help stochastic regularization techniques (SRT), one is able to estimate uncertainty in a NN.
+% Therefore, we will first introduce dropout which is a commonly used SRT in most deep learning models.
 
-Now, we consider a deterministic neural network with one hidden layer to illustrate the use of dropout.
+To tackle these problems, we first consider a deterministic neural network with one hidden layer to illustrate the use of dropout.
 Its (also deterministic) model parameters are defined by the matrices $\mathbf{M}_1 \in \mathbb{R}^{K_1\times K_0}$, which represent all connections\footnote{Recall: $K_i$ is the number of neurons in layer $i$.} from the input layer $0$ to hidden layer  $1$, and $\mathbf{M}_2 \in \mathbb{R}^{K_2\times K_1}$, which represents all connections form the hidden layer $1$ to the output layer $2$.
 Furthermore, we define bias vectors in each layer which we denote with $\mathbf{b}_1 \in \mathbb{R}^{K_1}$ and $\mathbf{b}_2\in \mathbb{R}^{K_2}$.
 
@@ -388,7 +397,7 @@ This results in a complete forward propagation defined by Eq.~\ref{eq:determinis
 Typically, the elements of the weight matrices are adapted during training, for example by gradient descent.
 
 Intuitively when applying dropout, we drop units from our network by setting their output values to zero randomly.
-Mathematically, this is done by sampling two binary vectors $\boldsymbol{\epsilon}_1$ and $\boldsymbol{\epsilon}_2$ independently from a Bernoulli distribution $\mathrm{Bern}(p)$ where $p$ represents the probability of a neuron being dropped.
+Mathematically, this is done by sampling two binary vectors $\boldsymbol{\epsilon}_1$ and $\boldsymbol{\epsilon}_2$ independently from a Bernoulli distribution $\mathrm{Bern}(p)$ where $p$ represents the probability of a neuron not being dropped.
 Thus, by using dropout, the output of the first layer is defined as $\mathbf{h} = \sigma\left( \mathbf{M_1}\hat{\mathbf{x}} + \mathbf{b}_1\right)$ where $\hat{\mathbf{x}} = \mathbf{x} \odot \boldsymbol{\epsilon}_1$.
 Similarly, the output of the second layer is $\hat{\mathbf{y}} = \mathbf{M}_2\hat{\mathbf{h}} + \mathbf{b}_2$ where $\hat{\mathbf{h}} = \mathbf{h} \odot \boldsymbol{\epsilon}$.
 The $\odot$-operator defines the hadamard product (element-wise multiplication).
@@ -397,7 +406,7 @@ At training, we apply dropout for every new input sample and use the correspondi
 At test time, we usually stop the dropout procedure and use the original units scaled by the factor $1 / \left(1 - p)\right)$. 
 We will see that using dropout at test time results in several advantages.
 
-Gal et al.~\cite{Gal2016Uncertainty} showed that using stochastic regularization techniques in an ordinary neural network, can be interpreted as an variational Bayesian approximation in an Bayesian NN with equivalent network architectures.
+Gal et al.~\cite{Gal2016Uncertainty} showed that using stochastic regularization techniques (e.\,g., dropout) in an ordinary neural network, can be interpreted as an variational Bayesian approximation in an Bayesian NN with equivalent network architectures.
 In order to show this, we transform the dropouts noise, that is currently added to samples in the feature space according to 
 \begin{align*}
     \hat{\mathbf{y}} = \mathbf{M}_2\hat{\mathbf{h}} 
@@ -407,10 +416,10 @@ In order to show this, we transform the dropouts noise, that is currently added 
 \end{align*}
 where $\mathrm{diag}(\cdot)$ transforms a vector into a diagonal matrix.
 This can be done similarly for the other weight matrix $\mathbf{M}_1$. 
-Thereby, dropout is now applied to the parameter space and we can interpret both matrices $\mathbf{W}_1 = \mathbf{M}_1  \cdot\mathrm{diag}\left(\boldsymbol{\epsilon}_1\right)$ and $\mathbf{W}_2 = \mathbf{M}_2  \cdot\mathrm{diag}\left(\boldsymbol{\epsilon}_2\right)$ as stochastic samples from a variational distribution $q(\boldsymbol{\omega})$.
+Thereby, dropout is now applied to the parameter space and we can interpret both matrices $\mathbf{W}_1 = \mathbf{M}_1  \cdot\mathrm{diag}\left(\boldsymbol{\epsilon}_1\right)$ and $\mathbf{W}_2 = \mathbf{M}_2  \cdot\mathrm{diag}\left(\boldsymbol{\epsilon}_2\right)$ as stochastic samples from a variational distribution $q_\theta(\boldsymbol{\omega})$.
 Gal refers the samples $\boldsymbol{\omega} = \{\mathrm{diag}(\boldsymbol{\epsilon}_1)\mathbf{M}_1,\mathrm{diag}( \boldsymbol{\epsilon}_2)\mathbf{M}_2 \}$ to a \textit{Bernoulli variational distribution} or \textit{dropout variational distribution}.
 It can be interpreted as a mixture of two Gaussians in which the first component has its mean fixed at zero according to $\mathcal{N}(0, \sigma^2)$. The second component is fixed at its weight value $\mathcal{N}(m,\sigma^2)$, where $m$ is an element of one of the deterministic matrices $\{\mathbf{M}_1, \dots, \mathbf{M}_L\}$.
-Both components have a tiny variance $\sigma^2$~\cite{Gal2015Bayesian} and the mixing coefficient is defined by the dropout rate.
+Both components have a tiny variance $\sigma^2$~\cite{Gal2015Bayesian} and the mixing coefficient is defined by the dropout rate $p$.
 
 In order to show that dropout in an ordinary NN is equivalent to VI in a BNN, we investigate the usual VI objective that is given by Eq.~\ref{eq:elbo_loss_expectation}.
 Note, the objective function of a dropout neural network (e.\,g., mean squared error) with weight decay has a similar form.
@@ -425,8 +434,8 @@ Gal showed~\cite{Gal2016Uncertainty} that in order to obtain an equivalent VI ob
 \end{align}
 where $l_i$ is called lengthscale, $\tau$ is the precision of the prior distributions and $p_i$ is the probability for a neuron to be dropped in layer $i$. 
 Low values for the lengthscale allow a good fit to data with high variance whereas high values have regularizing effects.
-Furthermore, it can be shown that the negative expected log likelihood is equivalent to common NN loss functions (i.\,e., mean squared error) up to a constant factor.
-Thus, by training a NN with dropout we already obtain a Bayesian NN with all its properties.
+Furthermore, it can be shown that the negative expected log likelihood is equivalent to common NN loss functions (i.\,e., mean squared error) up to a constant factor~\cite{Gal2016Uncertainty}.
+Thus, if we train a NN with dropout we obtain a Bayesian NN with all desired properties.
 
 In order to obtain the output distribution for a new instance $\mathbf{x}^*$, we make multiple forward propagations with dropout enabled. 
 This procedure is called Monte-Carlo dropout (MC-dropout) and approximately samples from the predictive distribution~\cite{Gal2016Uncertainty} given by Eq.~\ref{eq:predictive_distribution}.
@@ -440,7 +449,7 @@ Note however, in practice a convolutional neural network suffers in performance 
 One big advantage of dropout inference is the possibility of easy implementations with existing well-working architectures (such as \textit{AlexNet}~\cite{krizhevsky2012imagenet} or \textit{VGG}~\cite{vgg}).
 Moreover, we are easily able to scale to high complexity and large data sets.
 One key disadvantage is that dropout inference underestimates uncertainty.
-This is a general problem in all VI approaches which we illustrate when we talk about expectation propagation in the next chapter.
+This is a general problem in all VI approaches which we illustrate when we talk about expectation propagation in the next Section.
 %That however, is addressed by Li et al.~\cite{li2017dropout} with the use of $\alpha$-divergences (Section~\ref{sec:droput_alpha_divergence}).
 % They introduce an error function that can be parameterized in order to balance the behaviour of the variational distribution. 
 
@@ -452,7 +461,7 @@ In particular, this means that minimizing
 \begin{align}
     \mathrm{KL} \left(p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})  \| q_\theta(\boldsymbol{\omega})\right) &= 
     - \int p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y}) \ln \frac{q_{\theta}(\boldsymbol{\omega})}{p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})} \text{d}\boldsymbol{\omega} \\
-    &=  - \int p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y}) \ln q_{\theta}\left(\boldsymbol{\omega}\right)\mathrm{d}\boldsymbol{\omega} + \mathrm{const}
+    &=  - \int p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y}) \ln q_{\theta}\left(\boldsymbol{\omega}\right)\mathrm{d}\boldsymbol{\omega} + \mathrm{const}\label{eq:EP_objective}
 \end{align}
 with respect to $\theta$ will lead to a different solution. The additive constant is a result of separating the terms in the logarithm which are independent of the variational parameters $\theta$.
 
@@ -475,11 +484,11 @@ Instead, EP has a mass-covering behaviour in which it tries to cover the whole p
 Despite all this, expectation propagation is often not suitable for the inference in Bayesian neural networks. 
 This is because EP has to save every likelihood and prior factor in memory~\cite{minka2001expectation}.
 Therefore, it does not scale well to large data sets and high model complexity and hence we will not go into detail.
-In the next chapters, we present inference techniques which are slightly adapted versions of EP and address these problems.
+In the next Sections, we present inference techniques which are slightly adapted versions of EP and address these problems.
 
 \subsubsection{Probabilistic Backpropagation}
 A variation of expectation propagation was proposed by Lobato et al.~\cite{hernandez2015probabilistic} and is named \textit{probabilistic backpropagation} (PBP).
-In particular, it is a combination of EP and another related method that is called assumed density filtering~\cite{minka2001expectation}.
+In particular, it is a combination of EP and another related method that is called \textit{assumed density filtering}~\cite{minka2001expectation}.
 
 Similarly to the approaches described in Sec.~\ref{sec:variational_inference}, PBP makes the assumption of factorized distributions for the prior.
 This leads to the posterior (already used in VI) which is given by
@@ -487,29 +496,32 @@ This leads to the posterior (already used in VI) which is given by
     p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y}) =
     p(\mathbf{Y} |\mathbf{X})^{-1}
     \underbrace{\prod_{n=1}^{N} \mathcal{N}\left( \mathbf{y}_n | f^{\boldsymbol{\omega}}\left( \mathbf{x}_n \right), \sigma^2 \right)}_{\text{Likelihood: } p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})}
-    \underbrace{ \prod_{l}^{L} \prod_{i}^{K_l} \prod_{j}^{K_l-1}\mathcal{N}\left( w_{ij,l} | 0, 1\right)}_{\text{Prior: }p(\boldsymbol{\omega})} \label{eq:posterior_full}
+    \underbrace{ \prod_{l=1}^{L} \prod_{i=1}^{K_l} \prod_{j=1}^{K_l-1}\mathcal{N}\left( w_{ij,l} | 0, 1\right)}_{\text{Prior: }p(\boldsymbol{\omega})} \label{eq:posterior_full}
 \end{align}
-where the variance $\sigma^2$ is a hyperparameter that must be specified by the user and represents the aleatoric uncertainty in the training data.
+where the variance $\sigma^2$ is a hyperparameter that must be specified by the user and represents the aleatoric uncertainty (noise) in the training data.
 Besides that, PBP also assumes a factorized variational distribution which is given by
 \begin{align}
     q_\theta\left(\boldsymbol{\omega}\right) = \prod_{l=1}^{L}\prod_{i=1}^{K_l}\prod_{j=1}^{K_{l-1}} \mathcal{N}\left( w_{ij,l} \mid \theta^\mathrm{mean}_{ij,l}, \theta^\mathrm{var}_{ij,l}\right)\label{eq:variational_factorized_bpb}.
 \end{align}
-In order to update the parameters $\theta$, we define the set 
+In order to update the parameters $\theta$, we define the sets
 \begin{align}
-    \mathcal{J} = &\left\{ \mathcal{N}\left( \mathbf{y}_n | f^{\boldsymbol{\omega}}\left( \mathbf{x}_n \right), \sigma^2 \right) \,\middle|\, \forall (x_n, y_n) \in (\mathbf{X}, \mathbf{Y})\right\} \cup
-    \left\{ \mathcal{N}\left( w_{ij,l}|0, 1\right) \,\middle|\, \forall w_{ij,l} \in \boldsymbol{\omega} \right\}
+    \mathcal{S}_{\mathrm{L}} &= \underbrace{\left\{ \mathcal{N}\left( \mathbf{y}_n | f^{\boldsymbol{\omega}}\left( \mathbf{x}_n \right), \sigma^2 \right) \,\middle|\, (\mathbf{x}_n, \mathbf{y}_n) \in \mathbf{X} \times \mathbf{Y}\right\}}_{\text{Likelihood factors}},\\
+    \mathcal{S}_{\mathrm{P}} &= \underbrace{\left\{ \mathcal{N}\left( w_{ij,l}|0, 1\right) \,\middle|\,(l, i, j) \in \{1, \dots, L\}\times \{1, \dots, K_l\}\times \{1, \dots, K_{l-1}\}  \right\}}_{\text{Prior factors}},\\
+    \mathcal{S} &= \mathcal{S}_{\mathrm{L}} \cup \mathcal{S}_{\mathrm{P}},
 \end{align}
-which contains all factors from likelihood and prior from Eq.~\ref{eq:posterior_full}.
-Subsequently, we iterate over all distributions in $\mathcal{J}$ and minimize the KL-divergence given by
+where $\mathcal{S}$ contains all factors from likelihood and prior that are defined in Eq.~\ref{eq:posterior_full}.
+Subsequently, we iterate over all distributions in $\mathcal{S}$ and minimize the KL-divergence given by
 \begin{align}
     \theta^* = \underset{\theta}{\mathrm{argmin}}\  \mathrm{KL}\left(Z^{-1}f\cdot q_\theta(\boldsymbol{\omega})\right \| q_\theta(\boldsymbol{\omega})),
 \end{align}
-where $\theta^*$ represents the optimal solution, $f \in \mathcal{J}$ represents the current factor and $Z^{-1}$ depicts the normalization factor.
+where $\theta^*$ represents the optimal solution, $f \in \mathcal{S}$ represents the current factor and $Z^{-1}$ depicts the normalization factor.
 That is, we iteratively update the variational distribution by incorporating one factor from our posterior at a time.
-Lobato et al.~\cite{hernandez2015probabilistic} estimated the normalization factor $Z$ since it does not have a closed form solution.
+In doing so, we obtain an iterative optimization procedure which leads to an estimation of the EP objective~\cite{hernandez2015probabilistic} given in Eq.~\ref{eq:EP_objective} and thus we obtain a better uncertainty estimation with the drawback of slow convergence.
+The normalization factor $Z$ can not be computed analytically and was approximated by Lobato et al.~\cite{hernandez2015probabilistic}.
 Additionally, they incorporated another prior distribution for the parameters of the factorized Gaussian prior $p(\boldsymbol{\omega})$ which we replaced with unit Gaussians for simplicity.
 
-In contrast to PBP, EP removes the current factor from the posterior approximation which leads to improved accuracy. 
+In contrast to PBP, EP removes the current factor $f \in \mathcal{S}$ from the variational distribution $q_\theta(\boldsymbol{\omega})$ after each iteration.
+This leads to faster convergence and better approximations~\cite{minka2001expectation}.
 Nevertheless, it has the disadvantage that the approximate factors has to be kept in memory and thus we typically can not work with large data sets (GPU memory is often limited).
 
 \subsubsection{Dropout with $\alpha$-divergences}
@@ -523,16 +535,17 @@ That is, when considering $\alpha = 0$ we obtain the objective function $\mathrm
 In the case of $\alpha = 1$, we obtain $\mathrm{D}_1 = \mathrm{KL}(p\|q)$ which is equivalent to the EP objective.
 Intuitively, high values of $\alpha$ tend to cover more probability mass whereas low values tend to concentrate on local modes as illustrated in Fig~\ref{fig:EPvsVI}.
 
-Lobato et al.~\cite{hernandez2016black} proposed Blackbox-$\alpha$ that is based on the $\alpha$-divergence that is defined in \ref{eq:alpha_divergence}.
+Lobato et al.~\cite{hernandez2016black} proposed Blackbox-$\alpha$ that is based on the $\alpha$-divergence that is defined in
+Eq.~\ref{eq:alpha_divergence}.
 It uses a loss function that is easy to implement and can make use of libraries for automatic differentiation.
-In particular, it is derived by assuming distributions from the exponential family, thus it takes the form 
+In particular, it is derived by assuming distributions from the exponential family and thus it can be rewritten~\cite{li2017dropout} as
 \begin{align}
 \mathcal{F}_\alpha (\theta) = - \frac{1}{\alpha} \sum_{n =1}^N \ln\mathbb{E}_{q_\theta(\mathbf{\omega})}\left[ \left( \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}}(\mathbf{x}_n))p(\boldsymbol{\omega})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega})^\frac{1}{N}}\right)^\alpha\right].\label{eq:alpha_divergence_objective}
 \end{align}
 This expectation is often intractable and can be approximated using Monte-Carlo integration which results in
 \begin{align}
-\mathcal{F}_\alpha (\theta) \approx - \frac{1}{\alpha} \sum_{n =1}^N \ln \frac{1}{K}\sum_{k=1}^K
-\left[ \left( \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n))p(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}\right)^\alpha\right],\label{eq:alpha_divergence_objective_MC}
+\mathcal{F}_\alpha (\theta) \approx - \frac{1}{\alpha} \sum_{n =1}^N \ln \left\{ \frac{1}{K}\sum_{k=1}^K
+\left[ \left( \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n))p(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}\right)^\alpha\right]\right\},\label{eq:alpha_divergence_objective_MC}
 \end{align}
 where $\omega^{(k)}$ are samples from the variational distribution $q_\theta(\boldsymbol{\omega})$.
 As stated before, optimizing Eq.~\ref{eq:alpha_divergence_objective_MC} for different values of $\alpha$ leads to different behaviours of the variational distribution.
@@ -544,9 +557,9 @@ For that, they introduce cavity distributions in order to transform Eq.~\ref{eq:
 \end{align}
 where $l$ defines the loss function (e.\,g., mean squared error), $\boldsymbol{\omega}^{(k)}$ are samples from the dropout variational distribution and $\mathrm{L}_2(\theta)$ defines the $L2$-regularization of the parameters from the network.
 
-Note, in order to implement both loss functions in a numeric stable way, we need to make use of the so called \textit{log-sum-exp} trick. %which is shown in the appendix.
+Note, in order to implement both loss functions in a numeric stable way, we need to make use of the so called \textit{log-sum-exp} trick (Appendix~\ref{app:log_sum_exp}). %which is shown in the appendix.
 This is due to the factorized assumption for prior and variational distribution which will cause numerical issues.
-Accordingly, we have to transform  Eq.~\ref{eq:alpha_divergence_objective_MC} by taking the exponential of the logarithm of the argument in the inner sum.
+Accordingly, we have to transform  Eq.~\ref{eq:alpha_divergence_objective_MC} (Appendix~\ref{app:blackbox_alpha_derivation}) by taking the exponential of the logarithm of the argument in the inner sum.
 Equation~\ref{eq:dropout_alpha_divergence} does not need further transformation since it is already in a suitable form.
 More details can be found in the appendix and in our implementation.
 
@@ -558,52 +571,160 @@ Lobato and Li both identified that using $\alpha=0.5$, which is equivalent to th
 % They belong to the deterministic methods for estimating the posterior.
 % In particular, they assumed a variational distribution that has a simple form and therefore can not yield exact results.
 
-\subsection{Markov Chain Monte-Carlo}
-\label{sec:mcmc}
-In contrast to deterministic methods, Markov chain Monte-Carlo (MCMC) methods describe stochastic approaches that yield exact results.
-Such methods allow sampling from extremely complicated distribution such as the posterior from Eq.~\ref{eq:posterior} and scale well with a high dimensional sample space.
-However, MCMC methods are really slow and require a lot of iterations for accurate results.
-Besides that, it is often hard to determine the convergence of such methods.
+% \subsection{Markov Chain Monte-Carlo}
+% \label{sec:mcmc}
+% In contrast to deterministic methods, Markov chain Monte-Carlo (MCMC) methods describe stochastic approaches that yield exact results.
+% Such methods allow sampling from extremely complicated distribution such as the posterior from Eq.~\ref{eq:posterior} and scale well with a high dimensional sample space.
+% However, MCMC methods are really slow and require a lot of iterations for accurate results.
+% Besides that, it is often hard to determine the convergence of such methods.
+% 
+% In their usual form, MCMC algorithms start with a \textit{proposal distribution} $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau)})$ that is dependent on another sample $\boldsymbol{\omega}^{(\tau)}$.
+% It is a simpler distribution from which we can easily draw samples.
+% Subsequently, we iteratively sample $\boldsymbol{\omega}^*$ from distribution $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau)})$.
+% The sample is accepted if it fulfills a certain criterion which is usually defined by the algorithm.
+% If it is accepted, then we set $\boldsymbol{\omega}^{(\tau + 1)} = \boldsymbol{\omega}^*$ and repeat the procedure with the new proposal $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau + 1)})$.
+% We discard it if the criterion is not fulfilled.
+% In this way, the samples $\boldsymbol{\omega}^{(1)}, \boldsymbol{\omega}^{(1)}, \ldots, \boldsymbol{\omega}^{(n)}$ that are drawn from the proposal distribution construct a Markov Chain.
+% When doing this long for a long time, the stationary distribution of the Markov chain converges to the true distribution $p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})$.
+% 
+% One of the first approaches for MCMC in Bayesian NNs was proposed by Neal~\cite{Neal:1995:BLN:922680}. 
+% He uses a hybrid Monte-Carlo method which is an adaption of the Metropolis algorithm~\cite{metropolis1953equation} because ordinary MCMC methods that are commonly used in applications are very slow and suffer from random walk behaviour~\cite{bishop:2006:PRML}.
+% Furthermore, by using Gibbs sampling~\cite{Geman:1984:SRG:2286442.2286617} he also updates the hyperparameters.
+% The states $\boldsymbol{\omega}^{(1)}, \boldsymbol{\omega}^{(1)}, \ldots, \boldsymbol{\omega}^{(n)}$ are found by means of dynamic simulation.
+% However, it is batch method that can perform poorly on large data sets and needs problem specific parameter settings for training.
 
-In their usual form, MCMC algorithms start with a \textit{proposal distribution} $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau)})$ that is dependent on another sample $\boldsymbol{\omega}^{(\tau)}$.
-It is a simpler distribution from which we can easily draw samples.
-Subsequently, we iteratively sample $\boldsymbol{\omega}^*$ from distribution $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau)})$.
-The sample is accepted if it fulfills a certain criterion which is usually defined by the algorithm.
-If it is accepted, then we set $\boldsymbol{\omega}^{(\tau + 1)} = \boldsymbol{\omega}^*$ and repeat the procedure with the new proposal $g(\boldsymbol{\omega} | \boldsymbol{\omega}^{(\tau + 1)})$.
-We discard it if the criterion is not fulfilled.
-In this way, the samples $\boldsymbol{\omega}^{(1)}, \boldsymbol{\omega}^{(1)}, \ldots, \boldsymbol{\omega}^{(n)}$ that are drawn from the proposal distribution construct a Markov-Chain.
-When doing this long for a long time, the stationary distribution of the Markov chain converges to the true distribution $p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})$.
+\section{Discussion}
+We described important inference techniques for Bayesian NNs in which each has their advantages.
+Scalability to large data sets is addressed by all approaches but differ in their precise handling.
+Therefore, their applicability slightly varies for different tasks.
+For example, practical VI, Bayes-by-Backprop and Blackbox-$\alpha$ can make use of data sub-sampling techniques in order to avoid computation over the whole data set~\cite{Gal2016Uncertainty, li2017dropout}. 
+Similarly, Probabilistic Backpropagation incorporates each likelihood factor at a time and can be adapted to use batches of data~\cite{hernandez2015probabilistic}.
+In contrast, Dropout VI and Dropout-$\alpha$ can utilize common deep learning approaches that avoid computations on large data sets and additionally are able to escape local minima (e.\,g., stochastic gradient descent)~\cite{Gal2016Uncertainty}.
 
-One of the first approaches for MCMC in Bayesian NNs was proposed by Neal~\cite{Neal:1995:BLN:922680}. 
-He uses a hybrid Monte-Carlo method which is an adaption of the Metropolis algorithm~\cite{metropolis1953equation} because ordinary MCMC methods that are commonly used in applications are very slow and suffer from random walk behaviour~\cite{bishop:2006:PRML}.
-Furthermore, by using Gibbs sampling~\cite{Geman:1984:SRG:2286442.2286617} he also updates the hyperparameters.
-The states $\boldsymbol{\omega}^{(1)}, \boldsymbol{\omega}^{(1)}, \ldots, \boldsymbol{\omega}^{(n)}$ are found by means of dynamic simulation.
-However, it is batch method that can perform poorly on large data sets and needs problem specific parameter settings for training.
+Model complexity is an important factor which yields a problem in some methods~\cite{Graves2011Practical, BlundellBBB, hernandez2015probabilistic}. 
+In particular, approaches that use Gaussian distributions for the variational distribution $q_\theta(\boldsymbol{\omega})$ double the number of parameters.
+They are applicable to most models, but are limited when applying to very deep ones that want to exploit the entire memory of a GPU.
+In these cases, Dropout VI and Dropout-$\alpha$ yield an alternative which allows those implementations without additional memory usage~\cite{Gal2016Uncertainty}.
+
+All introduced techniques share similar problems with convergence time.
+When considering practical VI, we compute the gradient of an estimated loss which typically leads to stochastic gradients with high variance.
+In contrast, Bayes-by-Backprop exploits the reparametrization trick to avoid these problems and as a result, we obtain a much faster convergence.
+Besides that, a NN which uses dropout typically requires additional training iterations~\cite{krizhevsky2012imagenet}.
+
+In comparison to all other methods, the implementation of Dropout VI is the easiest and straightforward for different architectures~\cite{Gal2016Uncertainty, Kendall2017Uncertainy}.
+Any ordinary Deep NN can be transformed into an Bayesian one by applying dropout after every layer.
+Thus, it is well-suited for the deployment in practice as it can be implemented with the help of available software~\cite{Kendall2017Uncertainy}.
+
+The general goal of BNNs is to obtain a good estimation of uncertainty~\cite{Neal:1995:BLN:922680}. 
+However, the quality of those estimates differs between the approaches due to many factors.
+The complexity of the variational distribution $q_\theta(\boldsymbol{\omega})$ determines the capability to obtain uncertainty with good quality.
+The more complex the variational distribution is, the better is the uncertainty estimation~\cite{blei2017variational}.
+That is, the approaches that use a factorized Gaussian as the variational distribution yield better estimates than dropout VI~\cite{li2017dropout}.
+Furthermore, VI typically underestimates uncertainty in the parameters as mentioned in Sec.~\ref{sec:expectation_propagation}~\cite{bishop:2006:PRML}.
+A summary of all methods can be found in Table~\ref{tab:inference_comparison}.
+\begin{table}
+\centering\scriptsize
+\caption{Comparison of the introduced inference algorithms for Bayesian neural networks. 
+The operators that are denoted in the different cells depict an advantage/disadvantage ($+$/$-$) in the current field.}
+\label{tab:inference_comparison}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline & \begin{tabular}[c]{@{}c@{}}Data\\Size\end{tabular} & \begin{tabular}[c]{@{}c@{}}Computational\\Complexity\end{tabular} & \begin{tabular}[c]{@{}c@{}}Convergence\end{tabular} & \begin{tabular}[c]{@{}c@{}}Implementation\\Difficulty\end{tabular} & \begin{tabular}[c]{@{}c@{}}Uncertainty\\Quality\end{tabular} \\ \hline\hline
+
+Practical VI~\cite{Graves2011Practical}
+& $+$ & $+$ & $--$ & $-$ & $+$ \\ \hline
+Bayes-by-Backprop~\cite{BlundellBBB}
+& $+$ & $+$ & $+$ & $-$ & $+$ \\ \hline 
+Dropout VI~\cite{Gal2016Uncertainty}
+& $++$ & $++$ & $+$ & $++$ & $-$ \\ \hline
+\begin{tabular}[c]{@{}c@{}}Probabilistic \\ Backpropagation~\cite{hernandez2015probabilistic}\end{tabular} & $+$ & $+$ & $-$ & $--$ & $++$ \\ \hline
+Blackbox-$\alpha$~\cite{hernandez2016black}
+& $+$ & $+$ & $+$ & $-$ & $++$ \\ \hline
+Dropout-$\alpha$~\cite{li2017dropout}
+& $++$ & $++$ & $+$ & $+$ & $+$ \\ \hline
+\end{tabular}
+\end{table}
 
 \section{Conclusion and Outlook}
 \label{sec:conclusion_outlook}
-In this work, we gave an foundation to Bayesian neural networks and linked their training with common inference techniques such as variational inference, expectation propagation and Markov chain Monte-Carlo.
-Furthermore, we presented several important extensions in order to scale these techniques to the state-of-the-art field deep learning.
+In this work, we gave a foundation to Bayesian neural networks and linked their training with common inference techniques such as variational inference and expectation propagation.
+Furthermore, we presented several important extensions in order to scale these techniques to the state-of-the-art approaches in deep learning.
+The Bayesian framework for neural networks allows us to obtain epistemic uncertainty that arises from the addition of prior distributions over the parameters.
+As a results, we are able to incorporate these uncertainty measures into different research fields of ML.
+For example, with information regarding epistemic uncertainty, we are able to detect out-of-data samples that help with the exploration/exploitation trade-off in active- or reinforcement learning. 
+Therefore, a lot of research~\cite{BlundellBBB, gal2017deep, hernandez2015probabilistic, Gal2016Uncertainty} successfully uses Bayesian neural networks on various benchmark data sets.
 
-We conclude that the most promising framework for the training of Bayesian neural networks is probably dropout inference from Sec.~\ref{sec:dropout_inference}.
-It has several advantages: 
-\begin{itemize}
-    \item It scales with complex models without the addition of further parameters.
-    \item It scales with large amounts of data because the training is equivalent to the one of an ordinary neural network.
-    \item It is easy to implement with state-of-the-art architectures like convolutional neural networks.
-\end{itemize}
-Therefore, it can be readily implemented for several tasks where uncertainty estimation plays an important role (i.\,e. active learning~\cite{settles2009active}).
-Even though dropout inference does underestimate uncertainty, there are approaches like $\alpha$-divergences which tackle these problem.
-
-Unfortunately, the other methods introduced above double the model complexity and the generalization to other architectures (convolutional neural networks) is not straight forward. 
-For example, Markov chain Monte-Carlo methods often fail in combination with large data sets and need a lot of time for training.
-Bayes-by-Backprop or Probabilistic Backpropagation do not scale with network complexity and therefore are hard to use in modern days of big data.
-
-For future work, we aim to use dropout inference architectures for image recognition in an active learning setting.
-With these technique, we should be able to obtain a good uncertainty estimation which takes an important role.
-In particular, the $\alpha$-divergence seems to be promising since we can define a balance between uncertainty and predictive capability.
+However, the practical deployment of such models is a challenging problem.
+Robotic real time systems need to be able to return instant predictions to operate properly.
+This is currently not possible due to the need of Monte-Carlo integration in order to evaluate the predictive distribution (Eq.~\ref{eq:predictive_distribution}).
+Furthermore, the reliability of uncertainty needs further investigation. 
+A first step was done by Kendall et al.~\cite{Kendall2017Uncertainy} which analyzed the separation of aleatoric and epistemic uncertainty of Dropout VI in an image segmentation setting.
+Such research paves the way for the integration into practice and could motivate more frequent use of Bayesian deep learning.
+These, and a lot of other challenges need to be addressed to exploit its full potential.% of Bayesian neural networks.
 
 \bibliographystyle{splncs04}
 \bibliography{aBib}
 
+\newpage
+\section*{Appendix}
+\begin{subappendices}
+\renewcommand{\thesection}{\Alph{section}}%
+
+\section{Derivation - Evidence Lower Bound}
+The derivation of the elbo loss objective that is used in Section~\ref{sec:variational_inference} (Eq.~\ref{eq:elbo_loss_expectation}):
+\label{app:elbo_deriv}
+\begin{flalign}
+    &\text{KL}\left( q_\theta(\boldsymbol{\omega}) \| p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})\right)
+    = - \int q_{\theta}(\boldsymbol{\omega}) \ln \left(\frac{p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})}{q_{\theta}(\boldsymbol{\omega})}\right) \text{d}\boldsymbol{\omega}\\
+    &\qquad\qquad= \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln q_{\theta}(\boldsymbol{\omega})\right] - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln p(\boldsymbol{\omega} | \mathbf{X}, \mathbf{Y})\right]\\
+    &\qquad\qquad= \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln q_{\theta}(\boldsymbol{\omega})\right] - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln \frac{p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega}) p(\boldsymbol{\omega})}{p(\mathbf{Y}|\mathbf{X})}\right]\\
+    &\qquad\qquad= \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln q_{\theta}(\boldsymbol{\omega})\right] - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})\right] - \mathbb{E}_{q_\theta(\boldsymbol{\omega})} \left[\ln p(\boldsymbol{\omega})\right] \\
+    &\qquad\qquad \hspace{1em}+ \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln p(\mathbf{Y}|\mathbf{X})\right]\notag\\
+    &\qquad\qquad=  - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})\right] + \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln q_{\theta}(\boldsymbol{\omega})\right] - \mathbb{E}_{q_\theta(\boldsymbol{\omega})} \left[\ln p(\boldsymbol{\omega})\right] \\\notag
+    &\qquad\qquad\hspace{1em} + \ln p(\mathbf{Y}|\mathbf{X})\\
+    &\qquad\qquad=  - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})\right] + \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[\ln \frac{q_{\theta}(\boldsymbol{\omega})}{p(\boldsymbol{\omega})}\right] + \ln p(\mathbf{Y}|\mathbf{X})\\
+    &\qquad\qquad=  - \mathbb{E}_{q_\theta(\boldsymbol{\omega})}\left[ \ln p(\mathbf{Y} | \mathbf{X}, \boldsymbol{\omega})\right] + 
+    \mathrm{KL}\left(q_{\theta}(\boldsymbol{\omega}) \| p(\boldsymbol{\omega})\right) + \mathrm{const.}
+\end{flalign}
+The logarithm of the model evidence $\ln p(\mathbf{Y} | \mathbf{X})$ is independent of $\theta$ and can be absorbed into an additive constant.
+
+\newpage
+\section{Log-Sum-Exp Trick}
+\label{app:log_sum_exp}
+The \textit{log-sum-exp trick} is often used to avoid numerical problems that arise when we have a product with a large number of factors (Eq.~\ref{eq:alpha_divergence_objective_MC} \& Eq.~\ref{eq:dropout_alpha_divergence}). 
+In particular, this product will quickly tend to zero even if we compute it in $\log$-space due to the limited precision of computers.
+To avoid this problem, we can transform the log-sum-exp according to 
+\begin{align}
+    y &= \ln \sum_{n = 1}^{N} \exp \left( x_n\right) \\
+    \exp (y) &= \sum_{n = 1}^{N} \exp \left( x_n\right) \\
+    \exp(-a)\exp (y) &= \exp(-a)\sum_{n = 1}^{N} \exp \left( x_n\right) \\
+    \exp (y - a) &= \sum_{n = 1}^{N} \exp \left( x_n - a\right) \\
+    y - a &= \ln \sum_{n = 1}^{N} \exp \left( x_n - a\right) \\
+    y &= a + \ln \sum_{n = 1}^{N} \exp \left( x_n - a\right)
+\end{align}
+where $a \in \mathbb{R}$.
+This leads to
+\begin{align}
+    \ln \sum_{n = 1}^{N} \exp \left( x_n\right) &= a + \ln \sum_{n = 1}^{N} \exp \left( x_n - a\right), 
+\end{align}
+which means, that we are able to shift the center of the sum of exponentials.
+In practice, the value of $a$ is usually set to the maximum $a = \max_{n} x_n$ which forces the greatest value to be zero.
+This typically leads to a numerical stable computation.
+
+\newpage
+\section{Derivation - Numerical stable Blackbox-$\alpha$ Loss}
+\label{app:blackbox_alpha_derivation}
+In order to obtain a numerical stable Blackbox-$\alpha$ loss we transform Eq.~\ref{eq:alpha_divergence_objective_MC} as
+\begin{align}
+\mathcal{F}_\alpha (\theta) &\approx - \frac{1}{\alpha} \sum_{n =1}^N \ln \left\{ \frac{1}{K}\sum_{k=1}^K \left[ \left( \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n))p(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}\right)^\alpha\right]\right\}\\
+&= - \frac{1}{\alpha} \sum_{n =1}^N \ln \left\{ \frac{1}{K}\sum_{k=1}^K \exp \left( \ln \left[ \left( \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n))p(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}\right)^\alpha\right]\right)\right\}\\
+&= - \frac{1}{\alpha} \sum_{n =1}^N \ln \left\{ \frac{1}{K}\sum_{k=1}^K 
+\exp \left( \alpha \ln \left[  \frac{p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n))p(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}{q_\theta(\boldsymbol{\omega}^{(k)})^\frac{1}{N}}\right]\right)\right\}\\
+&= - \frac{1}{\alpha} \sum_{n =1}^N \ln \frac{1}{K}\sum_{k=1}^K 
+\exp \bigg( \alpha \ln   
+p(\mathbf{y}_n| f^{\boldsymbol{\omega}^{(k)}}(\mathbf{x}_n)) 
++  \frac{\alpha}{N}\ln p(\boldsymbol{\omega}^{(k)}) \label{eq:final_blackbox_alpha}\\ \notag &\hspace{1em}
+- \frac{\alpha}{N} \ln  q_\theta(\boldsymbol{\omega}^{(k)})\bigg).
+\end{align}
+Due to the appearance of log-sum-exp in Eq.~\ref{eq:final_blackbox_alpha}, we are now able to use the log-sum-exp trick (Appendix~\ref{app:log_sum_exp}) to avoid numerical issues.
+\end{subappendices}
 \end{document}

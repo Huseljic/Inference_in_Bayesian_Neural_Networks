@@ -8,7 +8,6 @@
  author = {Geman, Stuart and Geman, Donald},
  title = {Stochastic Relaxation, Gibbs Distributions, and the Bayesian Restoration of Images},
  journal = {IEEE Trans. Pattern Anal. Mach. Intell.},
- issue_date = {November 1984},
  volume = {6},
  number = {6},
  year = {1984},
@@ -30,11 +29,16 @@
   year={1953},
   publisher={AIP}
 }
-@article{hernandez2016black,
-  title={Black-box $\alpha$-divergence minimization},
-  author={Hern{\'a}ndez-Lobato, Jos{\'e} Miguel and Li, Yingzhen and Rowland, Mark and Hern{\'a}ndez-Lobato, Daniel and Bui, Thang and Turner, Richard},
-  year={2016},
-  publisher={International Machine Learning Society}
+@InProceedings{hernandez2016black,
+  title = 	 {Black-Box Alpha Divergence Minimization},
+  author = 	 {Jose Hernandez-Lobato and Yingzhen Li and Mark Rowland and Thang Bui and Daniel Hernandez-Lobato and Richard Turner},
+  booktitle = 	 {Proceedings of The 33rd International Conference on Machine Learning},
+  pages = 	 {1511--1520},
+  year = 	 {2016},
+  editor = 	 {Maria Florina Balcan and Kilian Q. Weinberger},
+  volume = 	 {48},
+  series = 	 {Proceedings of Machine Learning Research},
+  address = 	 {New York, New York, USA},
 }
 @book{amari2012differential,
   title={Differential-geometrical methods in statistics},
@@ -60,27 +64,20 @@
 @inproceedings{li2017dropout,
   title={Dropout inference in bayesian neural networks with alpha-divergences},
   author={Li, Yingzhen and Gal, Yarin},
-  booktitle={Proceedings of the 34th International Conference on Machine Learning-Volume 70},
+  booktitle={Proceedings of the 34th International Conference on Machine Learning},
   pages={2052--2061},
   year={2017},
 }
 @article{vgg,
-  added-at = {2016-11-19T13:14:27.000+0100},
-  author = {Simonyan, Karen and Zisserman, Andrew},
-  bibsource = {dblp computer science bibliography, http://dblp.org},
-  biburl = {https://www.bibsonomy.org/bibtex/20ee0434e0a70b329d5518f43f1742f7a/albinzehe},
-  interhash = {4e6fa56cb7cf99400d5701543ee228de},
-  intrahash = {0ee0434e0a70b329d5518f43f1742f7a},
-  keywords = {cnn ma-zehe neuralnet},
-  timestamp = {2016-11-19T13:14:27.000+0100},
-  title = {Very Deep Convolutional Networks for Large-Scale Image Recognition},
-  year = 2014
+  title={Very deep convolutional networks for large-scale image recognition},
+  author={Simonyan, Karen and Zisserman, Andrew},
+  journal={arXiv preprint arXiv:1409.1556},
+  year={2014}
 }
 @article{Srivastava:2014:DSW:2627435.2670313,
  author = {Srivastava, Nitish and Hinton, Geoffrey and Krizhevsky, Alex and Sutskever, Ilya and Salakhutdinov, Ruslan},
  title = {Dropout: A Simple Way to Prevent Neural Networks from Overfitting},
  journal = {Journal of Machine Learning Research},
- issue_date = {January 2014},
  volume = {15},
  number = {1},
  year = {2014},
@@ -117,29 +114,13 @@ terms= {}
   year = 2010
 }
 @article{shridhar2019comprehensive,
-  title={A Comprehensive guide to Bayesian Convolutional Neural Network with Variational Inference},
+  title={A comprehensive guide to bayesian convolutional neural network with variational inference},
   author={Shridhar, Kumar and Laumann, Felix and Liwicki, Marcus},
+  journal={arXiv preprint arXiv:1901.02731},
   year={2019}
 }
 @misc{kingma2013autoencoding,
-  abstract = {How can we perform efficient inference and learning in directed probabilistic
-models, in the presence of continuous latent variables with intractable
-posterior distributions, and large datasets? We introduce a stochastic
-variational inference and learning algorithm that scales to large datasets and,
-under some mild differentiability conditions, even works in the intractable
-case. Our contributions is two-fold. First, we show that a reparameterization
-of the variational lower bound yields a lower bound estimator that can be
-straightforwardly optimized using standard stochastic gradient methods. Second,
-we show that for i.i.d. datasets with continuous latent variables per
-datapoint, posterior inference can be made especially efficient by fitting an
-approximate inference model (also called a recognition model) to the
-intractable posterior using the proposed lower bound estimator. Theoretical
-advantages are reflected in experimental results.},
-  added-at = {2018-09-01T00:55:48.000+0200},
   author = {Kingma, Diederik P and Welling, Max},
-  biburl = {https://www.bibsonomy.org/bibtex/2d5418945b5a08cf2ad018a9d593364ed/gonzalob90},
-  interhash = {85731e0fbdb10b8543ea9f55301b37a5},
-  intrahash = {d5418945b5a08cf2ad018a9d593364ed},
   keywords = {VAE},
   title = {Auto-Encoding Variational Bayes},
   year = 2013
@@ -147,13 +128,10 @@ advantages are reflected in experimental results.},
 @inproceedings{Kingma:2015:VDL:2969442.2969527,
  author = {Kingma, Diederik P. and Salimans, Tim and Welling, Max},
  title = {Variational Dropout and the Local Reparameterization Trick},
- booktitle = {Proceedings of the 28th International Conference on Neural Information Processing Systems - Volume 2},
- series = {NIPS'15},
+ booktitle = {Proceedings of the 28th International Conference on Neural Information Processing Systems},
  year = {2015},
  location = {Montreal, Canada},
  pages = {2575--2583},
- numpages = {9},
- acmid = {2969527},
  publisher = {MIT Press},
  address = {Cambridge, MA, USA},
 }
@@ -166,17 +144,11 @@ year = {2011},
 publisher = {Curran Associates, Inc.},
 }
 @article{Kullback51klDivergence,
-  added-at = {2010-10-31T19:59:47.000+0100},
   author = {Kullback, S. and Leibler, R. A.},
-  biburl = {https://www.bibsonomy.org/bibtex/2560a5719c537c5c4a496bfebd4a21603/lee_peck},
-  description = {Kullback , Leibler : On Information and Sufficiency},
-  interhash = {f9d41d76a07383cca4c3a1a94c24d533},
-  intrahash = {560a5719c537c5c4a496bfebd4a21603},
   journal = {Ann. Math. Statist.},
   keywords = {51 Kullback Leibler divergence kl},
   number = 1,
   pages = {79-86},
-  timestamp = {2010-10-31T19:59:47.000+0100},
   title = {On Information and Sufficiency},
   volume = 22,
   year = 1951
@@ -231,8 +203,7 @@ publisher = {Curran Associates, Inc.},
 @inproceedings{BlundellBBB,
  author = {Blundell, Charles and Cornebise, Julien and Kavukcuoglu, Koray and Wierstra, Daan},
  title = {Weight Uncertainty in Neural Networks},
- booktitle = {Proceedings of the 32nd International Conference on Machine Learning - Volume 37},
- series = {ICML'15},
+ booktitle = {Proceedings of the 32nd International Conference on Machine Learning},
  year = {2015},
  location = {Lille, France},
  pages = {1613--1622},
@@ -271,8 +242,7 @@ publisher = {Curran Associates, Inc.},
 @inproceedings{Gal2016Dropout,
  author = {Gal, Yarin and Ghahramani, Zoubin},
  title = {Dropout As a Bayesian Approximation: Representing Model Uncertainty in Deep Learning},
- booktitle = {Proceedings of the 33rd International Conference on Machine Learning - Volume 48},
- series = {ICML'16},
+ booktitle = {Proceedings of the 33rd International Conference on Machine Learning},
  year = {2016},
  location = {New York, NY, USA},
  pages = {1050--1059},
@@ -280,17 +250,17 @@ publisher = {Curran Associates, Inc.},
  acmid = {3045502},
 } 
 @article{Gal2015Bayesian,
-Author = {Yarin Gal and Zoubin Ghahramani},
-Title = {Bayesian Convolutional Neural Networks with {B}ernoulli Approximate Variational Inference},
-Year = {2015},
+  title={Bayesian convolutional neural networks with Bernoulli approximate variational inference},
+  author={Gal, Yarin and Ghahramani, Zoubin},
+  journal={arXiv preprint arXiv:1506.02158},
+  year={2015}
 }
 @inproceedings{gal2017deep,
   title={Deep bayesian active learning with image data},
   author={Gal, Yarin and Islam, Riashat and Ghahramani, Zoubin},
-  booktitle={Proceedings of the 34th International Conference on Machine Learning-Volume 70},
+  booktitle={Proceedings of the 34th International Conference on Machine Learning},
   pages={1183--1192},
   year={2017},
-  organization={JMLR. org}
 }
 @phdthesis{Neal:1995:BLN:922680,
  author = {Neal, Radford M.},
@@ -308,51 +278,20 @@ Year = {2015},
   pages = 	 {6105--6114},
   year = 	 {2019},
   volume = 	 {97},
-  publisher = 	 {PMLR},
   pdf = 	 {http://proceedings.mlr.press/v97/tan19a/tan19a.pdf},
 }
-@article{multigrain,
-  author    = {Maxim Berman and
-               Herv{\'{e}} J{\'{e}}gou and
-               Andrea Vedaldi and
-               Iasonas Kokkinos and
-               Matthijs Douze},
-  title     = {MultiGrain: a unified image embedding for classes and instances},
-  year      = {2019},
-  eprint    = {1902.05509},
-  timestamp = {Tue, 21 May 2019 18:03:38 +0200},
-}
 @article{nlp1,
-  author    = {Li Dong and
-               Nan Yang and
-               Wenhui Wang and
-               Furu Wei and
-               Xiaodong Liu and
-               Yu Wang and
-               Jianfeng Gao and
-               Ming Zhou and
-               Hsiao{-}Wuen Hon},
-  title     = {Unified Language Model Pre-training for Natural Language Understanding
-               and Generation},
-  year      = {2019},
-  timestamp = {Mon, 27 May 2019 13:15:00 +0200},
+  title={Unified Language Model Pre-training for Natural Language Understanding and Generation},
+  author={Dong, Li and Yang, Nan and Wang, Wenhui and Wei, Furu and Liu, Xiaodong and Wang, Yu and Gao, Jianfeng and Zhou, Ming and Hon, Hsiao-Wuen},
+  journal={arXiv preprint arXiv:1905.03197},
+  year={2019}
 }
-@article{nlp2,
-  author    = {Ye Jia and
-               Yu Zhang and
-               Ron J. Weiss and
-               Quan Wang and
-               Jonathan Shen and
-               Fei Ren and
-               Zhifeng Chen and
-               Patrick Nguyen and
-               Ruoming Pang and
-               Ignacio Lopez{-}Moreno and
-               Yonghui Wu},
-  title     = {Transfer Learning from Speaker Verification to Multispeaker Text-To-Speech
-               Synthesis},
-  year      = {2018},
-  timestamp = {Mon, 13 Aug 2018 16:48:47 +0200},
+@inproceedings{nlp2,
+  title={Transfer learning from speaker verification to multispeaker text-to-speech synthesis},
+  author={Jia, Ye and Zhang, Yu and Weiss, Ron and Wang, Quan and Shen, Jonathan and Ren, Fei and Nguyen, Patrick and Pang, Ruoming and Moreno, Ignacio Lopez and Wu, Yonghui and others},
+  booktitle={Advances in neural information processing systems},
+  pages={4480--4490},
+  year={2018}
 }
 @incollection{Kendall2017Uncertainy,
 title = {What Uncertainties Do We Need in Bayesian Deep Learning for Computer Vision?},
